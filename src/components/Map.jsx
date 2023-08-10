@@ -3,19 +3,29 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import styles from './Map.module.css'
 import { useCities } from '../contexts/CitiesContext'
+import { useGeolocation } from '../hooks/useGeoLocation'
+import Button from './Button'
+import { useUrlPosition } from '../hooks/useUrlPosition'
 
 export default function Map() {
   const { cities } = useCities()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const lat = searchParams.get('lat')
-  const lng = searchParams.get('lng')
+  const [lat, lng] = useUrlPosition()
+  
   const [position, setPosition] = useState([40, 0])
+  const { isLoading: isLoadingPosition, position: geoPosition, getItNow } = useGeolocation()
+  
   useEffect(() => {
     if (lat && lng) setPosition([lat, lng])
   }, [lat, lng])
 
+  useEffect(() => {
+    if (geoPosition) setPosition([geoPosition.lat, geoPosition.lng])
+  }, [geoPosition])
+
+
   return (
     <div className={styles.mapContainer}>
+      <Button type='position' onClick={getItNow}>{isLoadingPosition ? 'Loading...' : 'Use my position'}</Button>
       <MapContainer className={styles.map} center={position} zoom={6} scrollWheelZoom={true}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

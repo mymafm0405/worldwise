@@ -1,11 +1,13 @@
-// "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=0&longitude=0"
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "./Button";
 
 import styles from "./Form.module.css";
 import BackButton from "./BackButton";
+import { useUrlPosition } from "../hooks/useUrlPosition";
+import Message from "./Message";
+import Spinner from "./Spinner";
 
 export function convertToEmoji(countryCode) {
   const codePoints = countryCode
@@ -15,13 +17,42 @@ export function convertToEmoji(countryCode) {
   return String.fromCodePoint(...codePoints);
 }
 
+const BASE_URL = "https://api.bigdatacloud.net/data/reverse-geocode-client";
 function Form() {
   const [cityName, setCityName] = useState("");
   const [country, setCountry] = useState("");
   const [date, setDate] = useState(new Date());
   const [notes, setNotes] = useState("");
   const navigate = useNavigate()
+  const [lat, lng] = useUrlPosition()
+  const [emoji, setEmoji] = useState('')
+  const [isLoadingData, setIsLoadingData] = useState(false)
+  const [cityError, setCityError] = useState('');
 
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setIsLoadingData(true)
+        setCityError('')
+        const res = await fetch(`${BASE_URL}?latitude=${lat}&longitude=${lng}`)
+        const data = await res.json()
+        if (!data.countryCode) throw new Error('There is no cities here, click on somewhere else 😉')
+        setCityName(data.city || data.locality || '')
+        setCountry(data.countryName);
+        setEmoji(convertToEmoji(data.countryCode))
+        console.log(data)
+      } catch (err) {
+        setCityError(err.message)
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    fetchData()
+  }, [lat, lng])
+
+  if (cityError) return <Message message={cityError} />
+  if (isLoadingData) return <Spinner />
   return (
     <form className={styles.form}>
       <div className={styles.row}>
@@ -31,7 +62,7 @@ function Form() {
           onChange={(e) => setCityName(e.target.value)}
           value={cityName}
         />
-        {/* <span className={styles.flag}>{emoji}</span> */}
+        <span className={styles.flag}>{emoji}</span>
       </div>
 
       <div className={styles.row}>
